@@ -1,0 +1,250 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Deploys an AWS Lambda function and related resources to return the expiration time of an Amazon AppStream 2.0 session.
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: 'IAM role'
+        Parameters:
+          - CreateFleetIAMRole
+      -
+        Label:
+          default: 'Lambda function'
+        Parameters:
+          - LogLevel
+          - LogRetentionDays
+          - Timeout
+          - Architecture
+    ParameterLabels:
+      Architecture:
+        default: 'Architecture'
+      CreateFleetIAMRole:
+        default: 'Create fleet IAM role'
+      LogLevel:
+        default: 'Python logging level'
+      LogRetentionDays:
+        default: 'Log retention period'
+      Timeout:
+        default: 'Timeout'
+Parameters:
+  Architecture:
+    Type: String
+    Description: 'x86_64 is supported in all AWS Regions. arm64 costs less, but is not supported in all AWS Regions.'
+    Default: 'x86_64'
+    AllowedValues:
+      - 'arm64'
+      - 'x86_64'
+  CreateFleetIAMRole:
+    Type: String
+    Description: 'Whether or not to create an IAM role (and inline policy) for use by AppStream 2.0 fleets.'
+    Default: 'Yes'
+    AllowedValues:
+      - 'No'
+      - 'Yes'
+  LogLevel:
+    Type: String
+    Description: 'Python logging level.'
+    Default: 'INFO'
+    AllowedValues:
+      - 'CRITICAL'
+      - 'ERROR'
+      - 'WARNING'
+      - 'INFO'
+      - 'DEBUG'
+  LogRetentionDays:
+    Type: Number
+    Description: 'Days to retain function logs.'
+    Default: 7
+    MinValue: 1
+    MaxValue: 3653
+    ConstraintDescription: 'Possible values: 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 2192, 2557, 2922, 3288, and 3653.'
+  Timeout:
+    Type: Number
+    Description: 'The amount of time (in seconds) that Lambda allows the function to run before stopping it.'
+    Default: 5
+    MinValue: 1
+    MaxValue: 900
+    ConstraintDescription: 'Must be an integer between 1 and 900.'
+Conditions:
+  CreateFleetIAMRole: !Equals
+    - !Ref CreateFleetIAMRole
+    - 'Yes'
+Resources:
+  # CloudWatch
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W84
+            reason: 'CloudWatch logs are encrypted by the service.'
+    Properties:
+      LogGroupName: !Join [ '',[ '/aws/lambda/', !Ref AppStream2SessionExpirationProxy ] ]
+      RetentionInDays: !Ref LogRetentionDays
+  # IAM
+  SessionExpirationFleetRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Delete
+    Condition: CreateFleetIAMRole
+    Properties:
+      RoleName: !Join ['_', ['SessionExpirationFleetRole', !Ref 'AWS::Region']]
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: appstream.amazonaws.com
+  SessionExpirationFleetPolicy:
+    Type: AWS::IAM::Policy
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Delete
+    Condition: CreateFleetIAMRole
+    Properties:
+      PolicyName: SessionExpirationFleetPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+            Resource: !GetAtt AppStream2SessionExpirationProxy.Arn
+      Roles:
+        - !Ref SessionExpirationFleetRole
+  SessionExpirationExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: lambda.amazonaws.com
+  SessionExpirationExecutionPolicy:
+    Type: AWS::IAM::Policy
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W12
+            reason: "appstream:DescribeSessions doesn't support resource-level permissions."
+    Properties:
+      PolicyName: SessionExpirationExecutionPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: !Join ['', ['arn:', !Ref 'AWS::Partition', ':logs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':log-group:/aws/lambda/AppStream2SessionExpirationProxy:*']]
+          - Effect: Allow
+            Action:
+              - appstream:DescribeSessions
+            Resource: '*'
+      Roles:
+        - !Ref SessionExpirationExecutionRole
+  # Lambda
+  AppStream2SessionExpirationProxy:
+    Type: AWS::Lambda::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W58
+            reason: 'The Lambda function has access to write logs.'
+          - id: W89
+            reason: "The Lambda function doesn't need access to resources in a VPC."
+    Properties:
+      Architectures:
+        - !Ref Architecture
+      Code:
+        ZipFile: |
+          #!/usr/bin/python
+          """
+          Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+          SPDX-License-Identifier: MIT-0
+
+          Returns the expiration date and time of an Amazon AppStream 2.0 session.
+          """
+          import logging
+          import os
+          from typing import Dict
+          
+          import boto3
+          from botocore.exceptions import ClientError
+          
+          # Map AppStream_User_Access_Mode session variable values to API values.
+          AUTH_TYPE_MAPPING: Dict[str, str] = {
+              "custom": "API",
+              "saml": "SAML",
+              "userpool": "USERPOOL"
+          }
+          
+          logger: logging.Logger = logging.getLogger()
+          LOG_LEVEL: str = str(os.environ["LOG_LEVEL"])
+          logger.setLevel(LOG_LEVEL)
+          
+          as2 = boto3.client("appstream")
+          
+          
+          def lambda_handler(
+              event: dict,
+              context: dict
+          ) -> dict:
+              """
+              Lambda event handler.
+              """
+              try:
+                  logging.debug(event)
+                  response = as2.describe_sessions(
+                      StackName=event["stackName"],
+                      FleetName=event["resourceName"],
+                      UserId=event["userName"],
+                      AuthenticationType=AUTH_TYPE_MAPPING[event["userAccessMode"]]
+                  )
+                  if response["Sessions"]:
+                      for session in response["Sessions"]:
+                          if session["Id"] == event["sessionId"]:
+                              logging.info("Matching session found")
+                              return {
+                                  "statusCode": 200,
+                                  "maxExpiration": session[
+                                      "MaxExpirationTime"
+                                  ].isoformat()
+                              }
+                  # No matching session found.
+                  logging.info("No matching session found")
+                  return {
+                      "statusCode": 404
+                  }
+              except ClientError as ce:
+                  # Boto3 client error
+                  logging.error(ce)
+                  return {
+                      "statusCode": 500
+                  }
+              except KeyError as ke:
+                  # Missing or invalid parameter.
+                  logging.error(ke)
+                  return {
+                      "statusCode": 400
+                  }
+
+      Description: 'Returns the expiration date and time of an Amazon AppStream 2.0 session.'
+      Environment:
+        Variables:
+          LOG_LEVEL: !Ref LogLevel
+      FunctionName: AppStream2SessionExpirationProxy
+      Handler: index.lambda_handler
+      ReservedConcurrentExecutions: 1
+      Role: !GetAtt SessionExpirationExecutionRole.Arn
+      Runtime: python3.9
+      Timeout: !Ref Timeout
+Outputs:
+  SessionExpirationFleetRoleName:
+    Condition: CreateFleetIAMRole
+    Description: Name of the IAM role for use by AppStream 2.0 fleets.
+    Value: !Ref SessionExpirationFleetRole
