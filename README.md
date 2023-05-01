@@ -14,7 +14,7 @@ When the session has less than 10 minutes remaining, the **Time remaining** text
 ![Screenshot of countdown window with nine minutes remaining](/images/screenshot-streaming-instance-9.png "Screenshot")
 
 ## Deployment
-See [Display session expiration and a countdown timer in Amazon AppStream 2.0](https://aws.amazon.com/desktop-and-application-streaming/display-session-expiration-and-a-countdown-timer-in-amazon-appstream-2-0/) on the AWS Desktop and Application Streaming blog for deployment instructions.
+See [Display session expiration and a countdown timer in Amazon AppStream 2.0](https://aws.amazon.com/blogs/desktop-and-application-streaming/display-session-expiration-and-a-countdown-timer-in-amazon-appstream-2-0/) on the AWS Desktop and Application Streaming blog for deployment instructions.
 
 ### CloudFormation template parameters
  **IAM role**
