@@ -88,7 +88,7 @@ $mainForm.Add_KeyDown({
 })
 
 if ($statusCode -eq 200) {
-	$maxExpiration = [Datetime]::ParseExact($responseBody.maxExpiration, 'yyyy-MM-ddTHH:mm:ss.ffffffzzz', $null)
+    $maxExpiration = [Datetime]::ParseExact($responseBody.maxExpiration, 'yyyy-MM-ddTHH:mm:ss.ffffffzzz', $null)
     $endLabel = New-Object System.Windows.Forms.Label
     $endLabel.Text = 'This session will end by {0}.' -f $maxExpiration
     $endLabel.Location  = New-Object System.Drawing.Point(5,10)
