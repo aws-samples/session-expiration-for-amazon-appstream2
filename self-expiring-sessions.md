@@ -3,3 +3,4 @@
 2. In step 4, do not create `C:\Scripts\Show-SessionInfo.ps1`.
    Instead, save Stop-Session.ps1 as `C:\Scripts\Stop-Session.ps1`.
    Do not add `Stop-Session.ps1` to the application catalog.
+3. Once in a streaming session, run `C:\Scripts\Stop-Session.ps1`.
