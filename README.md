@@ -38,4 +38,5 @@ The total cost of running this solution depends on the number of streaming sessi
 As of May 2023, the cost for running this solution with default settings in the US East (N. Virginia) Region is approximately $0.01 per month for 10,000 streaming sessions.
 
 ## License
-This solution is licensed under the MIT-0 License. See the LICENSE file.
+This solution is licensed under the MIT-0 License.
+See the LICENSE file.

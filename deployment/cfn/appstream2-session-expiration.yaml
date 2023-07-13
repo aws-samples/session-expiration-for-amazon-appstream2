@@ -130,7 +130,7 @@ Resources:
       cfn_nag:
         rules_to_suppress:
           - id: W12
-            reason: "appstream:DescribeSessions doesn't support resource-level permissions."
+            reason: "appstream:DescribeSessions and appstream:ExpireSessions don't support resource-level permissions."
     Properties:
       PolicyName: SessionExpirationExecutionPolicy
       PolicyDocument:
@@ -144,6 +144,7 @@ Resources:
           - Effect: Allow
             Action:
               - appstream:DescribeSessions
+              - appstream:ExpireSession
             Resource: '*'
       Roles:
         - !Ref SessionExpirationExecutionRole
@@ -209,12 +210,20 @@ Resources:
                       for session in response["Sessions"]:
                           if session["Id"] == event["sessionId"]:
                               logging.info("Matching session found")
-                              return {
-                                  "statusCode": 200,
-                                  "maxExpiration": session[
-                                      "MaxExpirationTime"
-                                  ].isoformat()
-                              }
+                              if event["action"] == "describe":
+                                  return {
+                                      "statusCode": 200,
+                                      "maxExpiration": session[
+                                          "MaxExpirationTime"
+                                      ].isoformat()
+                                  }
+                              if event["action"] == "expire":
+                                  response = as2.expire_session(
+                                      SessionId=event["sessionId"]
+                                  )
+                                  return {
+                                      "statusCode": 200
+                                  }
                   # No matching session found.
                   logging.info("No matching session found")
                   return {

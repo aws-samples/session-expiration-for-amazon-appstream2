@@ -45,12 +45,20 @@ def lambda_handler(
             for session in response["Sessions"]:
                 if session["Id"] == event["sessionId"]:
                     logging.info("Matching session found")
-                    return {
-                        "statusCode": 200,
-                        "maxExpiration": session[
-                            "MaxExpirationTime"
-                        ].isoformat()
-                    }
+                    if event["action"] == "describe":
+                        return {
+                            "statusCode": 200,
+                            "maxExpiration": session[
+                                "MaxExpirationTime"
+                            ].isoformat()
+                        }
+                    if event["action"] == "expire":
+                        response = as2.expire_session(
+                            SessionId=event["sessionId"]
+                        )
+                        return {
+                            "statusCode": 200
+                        }
         logging.info("No matching session found")
         return {
             "statusCode": 404

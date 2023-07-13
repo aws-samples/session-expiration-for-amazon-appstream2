@@ -56,6 +56,7 @@ if ($env:AppStream_Resource_Type -eq 'image-builder') {
 		resourceName=(Get-ItemPropertyValue -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment' -Name AppStream_Resource_Name)
 		userName=(Get-ItemPropertyValue -Path 'HKCU:\Environment' -Name AppStream_UserName)
 		userAccessMode=(Get-ItemPropertyValue -Path 'HKCU:\Environment' -Name AppStream_User_Access_Mode)
+		action='describe'
 	} | ConvertTo-Json
 
 	$invokeResponse = Invoke-LMFunction `
