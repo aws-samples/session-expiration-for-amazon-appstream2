@@ -56,6 +56,7 @@ def lambda_handler(
                         response = as2.expire_session(
                             SessionId=event["sessionId"]
                         )
+                        logging.info("Session expired")
                         return {
                             "statusCode": 200
                         }
