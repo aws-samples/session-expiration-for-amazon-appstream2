@@ -1,4 +1,7 @@
 # Self-expiring sessions
+
+![Architecture diagram](/images/architecture-expire-sessions.png "Architecture")
+
 1. Follow steps 1-3 on https://aws.amazon.com/blogs/desktop-and-application-streaming/display-session-expiration-and-a-countdown-timer-in-amazon-appstream-2-0/.
 2. In step 4, do not create `C:\Scripts\Show-SessionInfo.ps1`.
    Instead, save [Stop-Session.ps1](/source/Stop-Session.ps1) as `C:\Scripts\Stop-Session.ps1`.
