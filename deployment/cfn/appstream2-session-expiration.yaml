@@ -241,7 +241,7 @@ Resources:
       Handler: index.lambda_handler
       ReservedConcurrentExecutions: 1
       Role: !GetAtt SessionExpirationExecutionRole.Arn
-      Runtime: python3.9
+      Runtime: python3.12
       Timeout: !Ref Timeout
 Outputs:
   SessionExpirationFleetRoleName:
