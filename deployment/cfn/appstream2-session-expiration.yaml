@@ -171,28 +171,27 @@ Resources:
           """
           import logging
           import os
-          from typing import Dict
-          
+
           import boto3
           from botocore.exceptions import ClientError
-          
+
           # Map AppStream_User_Access_Mode session variable values to API values.
-          AUTH_TYPE_MAPPING: Dict[str, str] = {
+          AUTH_TYPE_MAPPING: dict[str, str] = {
               "custom": "API",
               "saml": "SAML",
               "userpool": "USERPOOL"
           }
-          
+
           logger: logging.Logger = logging.getLogger()
           LOG_LEVEL: str = str(os.environ["LOG_LEVEL"])
           logger.setLevel(LOG_LEVEL)
-          
+
           as2 = boto3.client("appstream")
-          
-          
+
+
           def lambda_handler(
               event: dict,
-              context: dict
+              context: dict # pylint: disable=W0613
           ) -> dict:
               """
               Lambda event handler.
@@ -215,7 +214,6 @@ Resources:
                                       "MaxExpirationTime"
                                   ].isoformat()
                               }
-                  # No matching session found.
                   logging.info("No matching session found")
                   return {
                       "statusCode": 404

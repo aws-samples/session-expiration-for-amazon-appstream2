@@ -7,13 +7,12 @@ Returns the expiration date and time of an Amazon AppStream 2.0 session.
 """
 import logging
 import os
-from typing import Dict
 
 import boto3
 from botocore.exceptions import ClientError
 
 # Map AppStream_User_Access_Mode session variable values to API values.
-AUTH_TYPE_MAPPING: Dict[str, str] = {
+AUTH_TYPE_MAPPING: dict[str, str] = {
     "custom": "API",
     "saml": "SAML",
     "userpool": "USERPOOL"
@@ -27,9 +26,9 @@ as2 = boto3.client("appstream")
 
 
 def lambda_handler(
-    event: Dict,
-    context: Dict
-) -> Dict:
+    event: dict,
+    context: dict # pylint: disable=W0613
+) -> dict:
     """
     Lambda event handler.
     """
