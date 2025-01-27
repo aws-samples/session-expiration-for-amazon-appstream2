@@ -31,7 +31,7 @@ Metadata:
 Parameters:
   Architecture:
     Type: String
-    Description: 'Select x86_64 if deploying to an AWS Region that doesn't support arm64.'
+    Description: "Select x86_64 if deploying to an AWS Region that doesn't support arm64."
     Default: 'arm64'
     AllowedValues:
       - 'arm64'
